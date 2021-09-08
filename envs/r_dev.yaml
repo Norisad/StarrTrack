@@ -1,0 +1,31 @@
+name:
+  r_dev
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - guillaumecharbonnier
+dependencies:
+  - r-dplyr
+  - r-tidyverse
+  - r-data.table
+  - r-gprofiler 
+  - r-yaml
+  - r-docopt
+  - r-devtools
+  - r-usethis
+  - r-testthat
+  - r-roxygen2
+  - r-rcolorbrewer
+  - r-ggpubr
+  - r-reshape
+  - r-fastcluster
+  - bioconductor-rtracklayer
+  - bioconductor-go.db
+  - bioconductor-clusterprofiler
+  - bioconductor-gosemsim
+  - bioconductor-org.hs.eg.db
+  - bioconductor-org.mm.eg.db
+  - bioconductor-rgreat
+  - r-ggplot2
+
