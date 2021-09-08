@@ -309,6 +309,17 @@ final_df.core_silencer=final_df_exclude %>%
 #Merge the dataframe of region which have at least one core silencer with all the region df
 full_df=merge(final_df.core_silencer, full_region_activity, by=c("chr","start_region", "end_region","region_id","region_activity_center","fpkm_cdna_region","fpkm_lib_region","region_type"),all = TRUE) # NA's match
 
+#In very few cases (1 or 2) because of normalization some region which have activity very close to -1 (-1.002) -> Then they don't have core silencer (very close to -1)
+full_df=full_df %>% 
+  mutate(start_core_silencer = ifelse(region_activity_center <= -1 & is.na(start_core_silencer),start_region,start_core_silencer),
+         end_core_silencer = ifelse(region_activity_center <= -1 & is.na(end_core_silencer),end_region,end_core_silencer),
+         activity_core_silencer = ifelse(region_activity_center <= -1 & is.na(activity_core_silencer),region_activity_center,activity_core_silencer),
+         start_edge = ifelse(region_activity_center <= -1 & is.na(start_edge),start_region,start_edge),
+         end_edge = ifelse(region_activity_center <= -1 & is.na(end_edge),end_region,end_edge),
+         activity_edge = ifelse(region_activity_center <= -1 & is.na(activity_edge),region_activity_center,activity_edge)
+  )
+
+
 #Normalize the reads count cdna/lib using rpkm
 # sum_count_full_df=apply(full_df[,c("coverage_cdna_region","coverage_lib_region")],2,sum)
 # region_list_clones_full_df <- lapply(region_list, function(x) which(full_df$region_id == x))
