@@ -306,8 +306,26 @@ final_df.core_silencer=final_df_exclude %>%
   select(-gr)%>%
   select(chr,start_region,end_region,fpkm_cdna_region,fpkm_lib_region,region_type,region_id,region_activity_center,start_core_silencer,end_core_silencer,activity_core_silencer,start_edge,end_edge,activity_edge)
 
+#Find core silencer region
+#On all data
+#Make groups. If value >1 increase of 1 grp ID
+#Merge data with same grp ID in order to get the core silencer and the edge silencer
+final_df.core_enhancer=final_df_exclude %>%
+  group_by(chr,region_id,start_region,end_region,region_type,region_activity_center,fpkm_cdna_region,fpkm_lib_region,gr = data.table::rleid(subregion_activity_center >= 1)) %>%
+  filter(subregion_activity_center >= 1) %>%
+  summarise(start_core_enhancer = first(start_subregion),
+            end_core_enhancer = last(end_subregion),
+            activity_core_enhancer = mean(subregion_activity_center)
+            )%>%
+  select(-gr)%>%
+  select(chr,start_region,end_region,fpkm_cdna_region,fpkm_lib_region,region_type,region_id,region_activity_center,start_core_enhancer,end_core_enhancer,activity_core_enhancer)
+
+#merge core enhancer with full df
+
+full_df_enhancer=merge(final_df.core_enhancer, full_region_activity, by=c("chr","start_region", "end_region","region_id","region_activity_center","fpkm_cdna_region","fpkm_lib_region","region_type"),all = TRUE) # NA's match
+
 #Merge the dataframe of region which have at least one core silencer with all the region df
-full_df=merge(final_df.core_silencer, full_region_activity, by=c("chr","start_region", "end_region","region_id","region_activity_center","fpkm_cdna_region","fpkm_lib_region","region_type"),all = TRUE) # NA's match
+full_df=merge(final_df.core_silencer, full_df_enhancer, by=c("chr","start_region", "end_region","region_id","region_activity_center","fpkm_cdna_region","fpkm_lib_region","region_type"),all = TRUE) # NA's match
 
 #In very few cases (1 or 2) because of normalization some region which have activity very close to -1 (-1.002) -> Then they don't have core silencer (very close to -1)
 full_df=full_df %>% 
