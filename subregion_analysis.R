@@ -85,6 +85,13 @@ scale_to_rgb <- function(val, bounds = NA,
 #   return(summary_coverage)}
 
 
+############################################################################
+########### Threshold used to determinate enhancer / silencer ##############
+############################################################################
+
+enhancer_threshold=1 # need to be change to > than inflexion point
+silencer_threshold=-1
+
 ###################
 #### Load Data ####
 ###################
@@ -267,13 +274,6 @@ final_region_subregion_rgb=final_region_subregion_rgb[order(final_region_subregi
          subregion_id=1) %>%
   select(chr,start_subregion,end_subregion,region_id,subregion_id,strand,start_sub,end_sub,rgb)
 
-# rgb_file<-file(args[6])
-cat(header_rgb, file =args[4])
-fwrite(x = final_region_subregion_rgb,
-       file = args[4],
-       sep = "\t",
-       col.names=F,
-       append=T)
 
 #Reorder dataframe and sort by region_id
 # col_order=c("chr","start_subregion","end_subregion","coverage_cdna_region","coverage_lib_region","subregion_id","subregion_activity","start_region","end_region","region_type","region_id","region_activity")
@@ -295,30 +295,32 @@ full_region_activity = full_region_activity[!duplicated(full_region_activity[,c(
 #Make groups. If value >1 increase of 1 grp ID
 #Merge data with same grp ID in order to get the core silencer and the edge silencer
 final_df.core_silencer=final_df_exclude %>%
-  group_by(chr,region_id,start_region,end_region,region_type,region_activity_center,fpkm_cdna_region,fpkm_lib_region,gr = data.table::rleid(subregion_activity_center <= -1)) %>%
-  filter(subregion_activity_center <= -1) %>%
+  group_by(chr,region_id,start_region,end_region,region_type,region_activity_center,fpkm_cdna_region,fpkm_lib_region,gr = data.table::rleid(subregion_activity_center <= silencer_threshold)) %>%
+  filter(subregion_activity_center <= silencer_threshold) %>%
   summarise(start_core_silencer = first(start_subregion),
             end_core_silencer = last(end_subregion),
             activity_core_silencer = mean(subregion_activity_center),
-            activity_edge = min(subregion_activity_center),
-            start_edge = min(start_subregion[subregion_activity_center == activity_edge]),
-            end_edge = max(end_subregion[subregion_activity_center == activity_edge])) %>%
+            silencer_edge_activity = min(subregion_activity_center),
+            start_edge_silencer = min(start_subregion[subregion_activity_center == silencer_edge_activity]),
+            end_edge_silencer = max(end_subregion[subregion_activity_center == silencer_edge_activity])) %>%
   select(-gr)%>%
-  select(chr,start_region,end_region,fpkm_cdna_region,fpkm_lib_region,region_type,region_id,region_activity_center,start_core_silencer,end_core_silencer,activity_core_silencer,start_edge,end_edge,activity_edge)
+  select(chr,start_region,end_region,fpkm_cdna_region,fpkm_lib_region,region_type,region_id,region_activity_center,start_core_silencer,end_core_silencer,activity_core_silencer,start_edge_silencer,end_edge_silencer,silencer_edge_activity)
 
 #Find core enhancer region
 #On all data
 #Make groups. If value >1 increase of 1 grp ID
 #Merge data with same grp ID in order to get the core silencer and the edge silencer
 final_df.core_enhancer=final_df_exclude %>%
-  group_by(chr,region_id,start_region,end_region,region_type,region_activity_center,fpkm_cdna_region,fpkm_lib_region,gr = data.table::rleid(subregion_activity_center >= 1)) %>%
-  filter(subregion_activity_center >= 1) %>%
+  group_by(chr,region_id,start_region,end_region,region_type,region_activity_center,fpkm_cdna_region,fpkm_lib_region,gr = data.table::rleid(subregion_activity_center >= enhancer_threshold)) %>%
+  filter(subregion_activity_center >= enhsilencer_threshold) %>%
   summarise(start_core_enhancer = first(start_subregion),
             end_core_enhancer = last(end_subregion),
-            activity_core_enhancer = mean(subregion_activity_center)
-            )%>%
+            activity_core_enhancer = mean(subregion_activity_center),
+            enhancer_edge_activity = min(subregion_activity_center),
+            start_edge_enhancer = min(start_subregion[subregion_activity_center == enhancer_edge_activity]),
+            end_edge_enhancer = max(end_subregion[subregion_activity_center == enhancer_edge_activity])) %>%
   select(-gr)%>%
-  select(chr,start_region,end_region,fpkm_cdna_region,fpkm_lib_region,region_type,region_id,region_activity_center,start_core_enhancer,end_core_enhancer,activity_core_enhancer)
+  select(chr,start_region,end_region,fpkm_cdna_region,fpkm_lib_region,region_type,region_id,region_activity_center,start_core_enhancer,end_core_enhancer,activity_core_enhancer,start_edge_enhancer,end_edge_enhancer,enhancer_edge_activity)
 
 #merge core enhancer with full df
 
@@ -329,12 +331,12 @@ full_df=merge(final_df.core_silencer, full_df_enhancer, by=c("chr","start_region
 
 #In very few cases (1 or 2) because of normalization some region which have activity very close to -1 (-1.002) -> Then they don't have core silencer (very close to -1)
 full_df=full_df %>% 
-  mutate(start_core_silencer = ifelse(region_activity_center <= -1 & is.na(start_core_silencer),start_region,start_core_silencer),
-         end_core_silencer = ifelse(region_activity_center <= -1 & is.na(end_core_silencer),end_region,end_core_silencer),
-         activity_core_silencer = ifelse(region_activity_center <= -1 & is.na(activity_core_silencer),region_activity_center,activity_core_silencer),
-         start_edge = ifelse(region_activity_center <= -1 & is.na(start_edge),start_region,start_edge),
-         end_edge = ifelse(region_activity_center <= -1 & is.na(end_edge),end_region,end_edge),
-         activity_edge = ifelse(region_activity_center <= -1 & is.na(activity_edge),region_activity_center,activity_edge)
+  mutate(start_core_silencer = ifelse(region_activity_center <= silencer_threshold & is.na(start_core_silencer),start_region,start_core_silencer),
+         end_core_silencer = ifelse(region_activity_center <= silencer_threshold & is.na(end_core_silencer),end_region,end_core_silencer),
+         activity_core_silencer = ifelse(region_activity_center <= silencer_threshold & is.na(activity_core_silencer),region_activity_center,activity_core_silencer),
+         start_edge_silencer = ifelse(region_activity_center <= silencer_threshold & is.na(start_edge_silencer),start_region,start_edge_silencer),
+         end_edge_silencer = ifelse(region_activity_center <= silencer_threshold & is.na(end_edge_silencer),end_region,end_edge_silencer),
+         silencer_edge_activity = ifelse(region_activity_center <= silencer_threshold & is.na(silencer_edge_activity),region_activity_center,silencer_edge_activity)
   )
 
 
@@ -365,50 +367,88 @@ full_df=full_df %>%
 # Annotate the df with gene
 # all is FALSE because we exclude some region (fpkm<1) : to avoid NA value
 full_df_annotated=merge(full_df,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
-  select(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,start_core_silencer,end_core_silencer,activity_core_silencer,start_core_enhancer,end_core_enhancer,activity_core_enhancer,genes)
+  select(chr,start_region,end_region,region_id,start_dhs,end_dhs,
+         fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,
+         start_core_silencer,end_core_silencer,activity_core_silencer,
+         start_edge_silencer,end_edge_silencer,silencer_edge_activity,
+         start_core_enhancer,end_core_enhancer,activity_core_enhancer,
+         start_edge_enhancer,end_edge_enhancer,enhancer_edge_activity,
+         genes)
 
 #Split dataframe to got only region with activity lower than -1/ core silencer
 # Not need if I create file with region and subregion in rgb
 
 full_df_annotated_region_silencer=full_df_annotated %>%
-  filter(region_activity_center <= -1)  %>%
+  filter(region_activity_center <= silencer_threshold)  %>%
   select(c(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,genes))
   full_df_annotated_region_silencer = full_df_annotated_region_silencer[!duplicated(full_df_annotated_region_silencer[,c('region_id')]),]
 
-#Get the region with at least one core silencer region annotated
+#Get the enhancer region
+full_df_annotated_region_enhancer=full_df_annotated %>%
+    filter(region_activity_center >= enhancer_threshold)  %>%
+    select(c(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,genes))
+full_df_annotated_region_enhancer = full_df_annotated_region_enhancer[!duplicated(full_df_annotated_region_enhancer[,c('region_id')]),]
+  
+#Get the core silencer which are in silencer region
 final_df.core_silencer_annotated=merge(final_df.core_silencer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
-  filter(region_activity_center <= -1)  %>%
-  select(chr,start_core_silencer,end_core_silencer,activity_core_silencer,region_type,region_id,genes,start_dhs,end_dhs)
+  filter(region_activity_center <= silencer_threshold)  %>%
+  select(chr,start_core_silencer,end_core_silencer,activity_core_silencer,
+         start_edge_silencer,end_edge_silencer,silencer_edge_activity,
+         region_type,region_id,region_activity_center,genes,start_dhs,end_dhs)
+
+#Get the core enhancer which are in enhancer region
+final_df.core_enhancer_annotated=merge(final_df.core_enhancer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
+  filter(region_activity_center >= enhancer_threshold)  %>%
+  select(chr,start_core_enhancer,end_core_enhancer,activity_core_enhancer,
+         start_edge_enhancer,end_edge_enhancer,enhancer_edge_activity,
+         region_type,region_id,region_activity_center,genes,start_dhs,end_dhs)
+
 
 #Get weak and strong silencer
-weak_silencer=filter(final_df.core_silencer_annotated, activity_core_silencer > -2)
-strong_silencer=filter(final_df.core_silencer_annotated, activity_core_silencer <= -2)
+# weak_silencer=filter(final_df.core_silencer_annotated, activity_core_silencer > -2)
+# strong_silencer=filter(final_df.core_silencer_annotated, activity_core_silencer <= -2)
 
 
 #Get df with only edge
-final_df.edge_annotated=merge(final_df.core_silencer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
-  filter(region_activity_center <= -1)  %>%
-  select(chr,start_edge,end_edge,activity_edge,region_type,region_id,genes,start_dhs,end_dhs)
+# final_df.edge_annotated=merge(final_df.core_silencer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
+#   filter(region_activity_center <= -1)  %>%
+#   select(chr,start_edge,end_edge,activity_edge,region_type,region_id,genes,start_dhs,end_dhs)
 
+
+#####################################
+############### OUTPUT############### 
+#####################################
 
 # Output for the summary df : contain all the informations
-write.table(full_df_annotated, file=args[2],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+write.table(full_df_annotated, file=args[3],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 
 #Output of region 
-write.table(full_df_annotated_region_silencer, file=args[3],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+write.table(full_df_annotated_region_silencer, file=args[4],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+
+write.table(full_df_annotated_region_enhancer, file=args[5],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+
+#RGB file
+# rgb_file<-file(args[6])
+cat(header_rgb, file =args[5])
+fwrite(x = final_region_subregion_rgb,
+       file = args[4],
+       sep = "\t",
+       col.names=F,
+       append=T)
+
 
 # Bed file of core silencer
-write.table(final_df.core_silencer_annotated, file=args[5],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+write.table(final_df.core_silencer_annotated, file=args[6],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 # Bed file of weak core silencer
-write.table(weak_silencer, file=args[6],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
-# Bed file of strong core silencer
-write.table(strong_silencer, file=args[7],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
-
-# Bed file of edge silencer
-write.table(final_df.edge_annotated, file=args[8],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+# write.table(weak_silencer, file=args[6],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+# # Bed file of strong core silencer
+# write.table(strong_silencer, file=args[7],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+# 
+# # Bed file of edge silencer
+# write.table(final_df.edge_annotated, file=args[8],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 
 # Save environment : if need to check something on the data on the R processing
-save.image(file=args[9])
+save.image(file=args[7])
 
 #####################
 #Test on some regions

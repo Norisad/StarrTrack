@@ -31,7 +31,7 @@ COND,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_ana
 
 
 
-rule all:
+rule all :
     input:
         expand("data/bed_rgb/by_clones/{cdna}_paste_{lib}.rgb.bed",cdna=CDNA,lib=LIBRARY),
         expand("data/bed_rgb/by_clones/merged_replicates_paste_{lib}.rgb.bed",lib=LIBRARY),
@@ -43,14 +43,8 @@ rule all:
         expand("data/R_envs_save/merged_replicates_paste_{lib}.env.RData",lib=LIBRARY),
         expand("data/core_silencer/{cdna}_paste_{lib}.region.silencer.bed",cdna=CDNA,lib=LIBRARY),
         expand("data/core_silencer/{cdna}_paste_{lib}.core_silencer.bed",cdna=CDNA,lib=LIBRARY),
-        expand("data/core_silencer/{cdna}_paste_{lib}.weak.core_silencer.bed",cdna=CDNA,lib=LIBRARY),
-        expand("data/core_silencer/{cdna}_paste_{lib}.strong.core_silencer.bed",cdna=CDNA,lib=LIBRARY),
-        expand("data/core_silencer/{cdna}_paste_{lib}.edge_silencer.bed",cdna=CDNA,lib=LIBRARY),
         expand("data/core_silencer/merged_replicates_paste_{lib}.region.silencer.bed",lib=LIBRARY),
-        expand("data/core_silencer/merged_replicates_paste_{lib}.core_silencer.bed",lib=LIBRARY),
-        expand("data/core_silencer/merged_replicates_paste_{lib}.weak.core_silencer.bed",lib=LIBRARY),
-        expand("data/core_silencer/merged_replicates_paste_{lib}.strong.core_silencer.bed",lib=LIBRARY),
-        expand("data/core_silencer/merged_replicates_paste_{lib}.edge_silencer.bed",lib=LIBRARY)
+        expand("data/core_silencer/merged_replicates_paste_{lib}.core_silencer.bed",lib=LIBRARY)
 
 
 # rule get_normalization_value:
@@ -119,46 +113,35 @@ rule compute_fc:
         awk -v cdna1=$SIZE_CDNA -v inp=$SIZE_LIB -v pseudocount=1 -v FS='\t' -v OFS='\t' '/^chr/{{ratio=(($7+pseudocount)/($8+pseudocount))*(inp/cdna1);print $0,ratio}}' {input.annotate} | cut -f 1-8,11 > {output}
     '''
 
-# rule find_core_edge_silencer_merged_rep:
-#     input:
-#         cat="data/annotated_clones_subregion/merged_replicates.enlarged_dhs.considered_region.subregion.bed"
-#     output:
-#         rep_cat="data/core_silencer/merged_replicates.enlarged_dhs.considered_region.subregion.core_silencer.csv",group="data/core_silencer/merged_replicates.enlarged_dhs.considered_region.subregion.core_silencer.group.csv"
-#     conda:
-#         "envs/r_dev.yaml"
-#     shell:'''
-#         Rscript --vanilla subregion_analysis.R  {input.cat} {output.rep_cat} {output.group}
-#         '''
-
 # R analysis
 rule find_core_edge_silencer:
     input:
         rep="data/tmp/annotated_clones_subregion/{cdna}_paste_{lib}.enlarged_dhs.considered_region.subregion.bed"
     output:
         summary = "data/summary/{cdna}_paste_{lib}.summary.txt",
-        region_out = "data/core_silencer/{cdna}_paste_{lib}.region.silencer.bed",
+        region_silencer_out = "data/silencer_files/{cdna}_paste_{lib}.region.silencer.bed",
+        region_enhancer_out = "data/enhancer_files/{cdna}_paste_{lib}.region.silencer.bed",
         region_rgb = "data/bed_rgb/by_region_subregion/{cdna}_paste_{lib}.considered_region.rgb.bed",
-        subregion_out = "data/core_silencer/{cdna}_paste_{lib}.core_silencer.bed",
-        weak_out = "data/core_silencer/{cdna}_paste_{lib}.weak.core_silencer.bed",
-        strong_out = "data/core_silencer/{cdna}_paste_{lib}.strong.core_silencer.bed",
-        edge_out = "data/core_silencer/{cdna}_paste_{lib}.edge_silencer.bed",
-        out_env = "data/R_envs_save/{cdna}_paste_{lib}.env.RData"
 
+        subregion_silencer_out = "data/silencer_files/{cdna}_paste_{lib}.core_silencer.bed",
+        subregion_enhancer_out = "data/enhancer_files/{cdna}_paste_{lib}.core_enhancer.bed",
+        out_env = "data/R_envs_save/{cdna}_paste_{lib}.env.RData"
     conda:
         "envs/r_dev.yaml"
     shell: '''
-        Rscript --vanilla subregion_analysis.R {input.rep} {output.summary} {output.region_out} {output.region_rgb} {output.subregion_out} {output.weak_out} {output.strong_out} {output.edge_out} {output.out_env}
+        Rscript --vanilla subregion_analysis.R
+        {input.rep}
+        {output.summary}
+        {output.region_silencer_out}
+        {output.region_enhancer_out}
+        {output.region_rgb}
+        {output.subregion_silencer_out}
+        {output.subregion_enhancer_out}
+        {output.out_env}
         '''
 
 
-# rule concat_annotated_considered_region_subregion_bins:
-#     input:
-#         expand("data/annotated_clones_subregion/{cdna}_paste_{lib}.enlarged_dhs.considered_region.subregion.bed",cdna=CDNA,lib=LIBRARY)
-#     output:
-#         "data/annotated_clones_subregion/merged_replicates.enlarged_dhs.considered_region.subregion.bed"
-#     shell:'''
-#         cat {input} > {output}
-#     '''
+
 
 rule annotated_considered_region_subregion_bins:
     input:
