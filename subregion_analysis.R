@@ -306,7 +306,7 @@ final_df.core_silencer=final_df_exclude %>%
   select(-gr)%>%
   select(chr,start_region,end_region,fpkm_cdna_region,fpkm_lib_region,region_type,region_id,region_activity_center,start_core_silencer,end_core_silencer,activity_core_silencer,start_edge,end_edge,activity_edge)
 
-#Find core silencer region
+#Find core enhancer region
 #On all data
 #Make groups. If value >1 increase of 1 grp ID
 #Merge data with same grp ID in order to get the core silencer and the edge silencer
@@ -365,7 +365,7 @@ full_df=full_df %>%
 # Annotate the df with gene
 # all is FALSE because we exclude some region (fpkm<1) : to avoid NA value
 full_df_annotated=merge(full_df,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
-  select(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,start_core_silencer,end_core_silencer,activity_core_silencer,start_edge,end_edge,activity_edge,genes)
+  select(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,start_core_silencer,end_core_silencer,activity_core_silencer,start_core_enhancer,end_core_enhancer,activity_core_enhancer,genes)
 
 #Split dataframe to got only region with activity lower than -1/ core silencer
 # Not need if I create file with region and subregion in rgb
