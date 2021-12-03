@@ -77,6 +77,94 @@ scale_to_rgb <- function(val, bounds = NA,
   }
 }
 
+#Compute the inflexion point
+calculate_cutoff <- function(inputVector, drawPlot=TRUE,...){
+  inputVector <- sort(inputVector)
+  inputVector[inputVector<0] <- 0 #set those regions with more control than ranking equal to zero
+  slope <- (max(inputVector)-min(inputVector))/length(inputVector) #This is the slope of the line we want to slide. This is the diagonal.
+  xPt <- floor(
+    optimize(
+      numPts_below_line,
+      lower = 1,
+      upper = length(inputVector),
+      myVector = inputVector,
+      slope = slope
+    )$minimum
+  ) #Find the x-axis point where a line passing through that point has the minimum number of points below it. (ie. tangent)
+  y_cutoff <- inputVector[xPt] #The y-value at this x point. This is our cutoff.
+  
+  if(drawPlot){  #if TRUE, draw the plot
+    plot(
+      1:length(inputVector),
+      inputVector,
+      type = "l",
+      ...
+    )
+    b <- y_cutoff-(slope* xPt)
+    abline(
+      v = xPt,
+      h = y_cutoff,
+      lty = 2,
+      col = 8
+    )
+    points(
+      xPt,
+      y_cutoff,
+      pch = 16,
+      cex = 0.9,
+      col = 2
+    )
+    abline(
+      coef = c(b,slope),
+      col = 2
+    )
+    title(
+      paste(
+        "x=",
+        xPt,
+        "\ny=",
+        signif(
+          y_cutoff,
+          3
+        ),
+        "\nFold over Median=",
+        signif(
+          y_cutoff/median(inputVector),
+          3
+        ),
+        "x\nFold over Mean=",
+        signif(
+          y_cutoff/mean(inputVector),
+          3
+        ),
+        "x",
+        sep=""
+      )
+    )
+    axis(
+      1,
+      sum(inputVector==0),
+      sum(inputVector==0),
+      col.axis = "pink",
+      col = "pink"
+    ) #Number of regions with zero signal
+  }
+  return(
+    list(
+      absolute = y_cutoff,
+      overMedian = y_cutoff/median(inputVector),
+      overMean = y_cutoff/mean(inputVector)
+    )
+  )
+}
+
+numPts_below_line <- function(myVector,slope,x){
+  yPt <- myVector[x]
+  b <- yPt-(slope*x)
+  xPts <- 1:length(myVector)
+  return(sum(myVector<=(xPts*slope+b)))
+}
+
 # get_coverage=function(list_of_clones,df){
 #   summary_coverage= data.frame(
 #     coverage_cdna = sapply( list_of_clones, function(x) sum( df[!duplicated(df[,c('chr','start_clone','end_clone')]),][x, "cdna_count"] )),
@@ -312,7 +400,7 @@ final_df.core_silencer=final_df_exclude %>%
 #Merge data with same grp ID in order to get the core silencer and the edge silencer
 final_df.core_enhancer=final_df_exclude %>%
   group_by(chr,region_id,start_region,end_region,region_type,region_activity_center,fpkm_cdna_region,fpkm_lib_region,gr = data.table::rleid(subregion_activity_center >= enhancer_threshold)) %>%
-  filter(subregion_activity_center >= enhsilencer_threshold) %>%
+  filter(subregion_activity_center >= enhancer_threshold) %>%
   summarise(start_core_enhancer = first(start_subregion),
             end_core_enhancer = last(end_subregion),
             activity_core_enhancer = mean(subregion_activity_center),
@@ -383,9 +471,14 @@ full_df_annotated_region_silencer=full_df_annotated %>%
   select(c(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,genes))
   full_df_annotated_region_silencer = full_df_annotated_region_silencer[!duplicated(full_df_annotated_region_silencer[,c('region_id')]),]
 
+#Compute the inflexion point : threshold to determine the enhancer
+
+th_inflexion_point_enhancer <- log2(calculate_cutoff(2^full_df_annotated$region_activity_center, drawPlot=F)$absolute)
+
+calculate_cutoff(dat[idx,5], drawPlot=F)$absolute
 #Get the enhancer region
 full_df_annotated_region_enhancer=full_df_annotated %>%
-    filter(region_activity_center >= enhancer_threshold)  %>%
+    filter(region_activity_center >= th_inflexion_point_enhancer)  %>%
     select(c(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,genes))
 full_df_annotated_region_enhancer = full_df_annotated_region_enhancer[!duplicated(full_df_annotated_region_enhancer[,c('region_id')]),]
   
@@ -398,7 +491,7 @@ final_df.core_silencer_annotated=merge(final_df.core_silencer,DHS_annotated, by=
 
 #Get the core enhancer which are in enhancer region
 final_df.core_enhancer_annotated=merge(final_df.core_enhancer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
-  filter(region_activity_center >= enhancer_threshold)  %>%
+  filter(region_activity_center >= th_inflexion_point_enhancer)  %>%
   select(chr,start_core_enhancer,end_core_enhancer,activity_core_enhancer,
          start_edge_enhancer,end_edge_enhancer,enhancer_edge_activity,
          region_type,region_id,region_activity_center,genes,start_dhs,end_dhs)
