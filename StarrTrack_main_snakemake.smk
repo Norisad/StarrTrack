@@ -18,7 +18,7 @@ import numpy as np
 #instead of set env -> setup config file to use appropriate conda env
 
 #Working directory
-workdir:'/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1'
+workdir:'/gpfs/tagc/home/sadouni/atac_starseq/'  # edit
 # workdir:'/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1' # on mac
 
 # Dataset : For now here then I have to setup config.yaml to don't touch this file
@@ -41,10 +41,14 @@ rule all :
         expand("data/summary/merged_replicates_paste_{lib}.summary.txt",lib=LIBRARY),
         expand("data/R_envs_save/{cdna}_paste_{lib}.env.RData",cdna=CDNA,lib=LIBRARY),
         expand("data/R_envs_save/merged_replicates_paste_{lib}.env.RData",lib=LIBRARY),
-        expand("data/core_silencer/{cdna}_paste_{lib}.region.silencer.bed",cdna=CDNA,lib=LIBRARY),
-        expand("data/core_silencer/{cdna}_paste_{lib}.core_silencer.bed",cdna=CDNA,lib=LIBRARY),
-        expand("data/core_silencer/merged_replicates_paste_{lib}.region.silencer.bed",lib=LIBRARY),
-        expand("data/core_silencer/merged_replicates_paste_{lib}.core_silencer.bed",lib=LIBRARY)
+        expand("data/bed_activity/{cdna}_paste_{lib}.region.silencer.bed",cdna=CDNA,lib=LIBRARY),
+        expand("data/bed_activity/{cdna}_paste_{lib}.core_silencer.bed",cdna=CDNA,lib=LIBRARY),
+        expand("data/bed_activity/{cdna}_paste_{lib}.region.enhancer.bed",cdna=CDNA,lib=LIBRARY),
+        expand("data/bed_activity/{cdna}_paste_{lib}.core_enhancer.bed",cdna=CDNA,lib=LIBRARY),
+        expand("data/bed_activity/merged_replicates_paste_{lib}.region.silencer.bed",lib=LIBRARY),
+        expand("data/bed_activity/merged_replicates_paste_{lib}.core_silencer.bed",lib=LIBRARY),
+        expand("data/bed_activity/merged_replicates_paste_{lib}.region.enhancer.bed",lib=LIBRARY),
+        expand("data/bed_activity/merged_replicates_paste_{lib}.core_enhancer.bed",lib=LIBRARY)
 
 
 # rule get_normalization_value:
@@ -119,37 +123,34 @@ rule find_core_edge_silencer:
         rep="data/tmp/annotated_clones_subregion/{cdna}_paste_{lib}.enlarged_dhs.considered_region.subregion.bed"
     output:
         summary = "data/summary/{cdna}_paste_{lib}.summary.txt",
-        region_silencer_out = "data/silencer_files/{cdna}_paste_{lib}.region.silencer.bed",
-        region_enhancer_out = "data/enhancer_files/{cdna}_paste_{lib}.region.silencer.bed",
+        region_silencer_out = "data/bed_activity/{cdna}_paste_{lib}.region.silencer.bed",
+        region_enhancer_out = "data/bed_activity/{cdna}_paste_{lib}.region.enhancer.bed",
         region_rgb = "data/bed_rgb/by_region_subregion/{cdna}_paste_{lib}.considered_region.rgb.bed",
-
-        subregion_silencer_out = "data/silencer_files/{cdna}_paste_{lib}.core_silencer.bed",
-        subregion_enhancer_out = "data/enhancer_files/{cdna}_paste_{lib}.core_enhancer.bed",
+        subregion_silencer_out = "data/bed_activity/{cdna}_paste_{lib}.core_silencer.bed",
+        subregion_enhancer_out = "data/bed_activity/{cdna}_paste_{lib}.core_enhancer.bed",
         out_env = "data/R_envs_save/{cdna}_paste_{lib}.env.RData"
     conda:
-        "envs/r_dev.yaml"
+        "envs/starrtrak_envs.yaml"
     shell: '''
         Rscript --vanilla subregion_analysis.R
         {input.rep}
         {output.summary}
+        {output.region_rgb}
         {output.region_silencer_out}
         {output.region_enhancer_out}
-        {output.region_rgb}
         {output.subregion_silencer_out}
         {output.subregion_enhancer_out}
         {output.out_env}
         '''
-
-
-
 
 rule annotated_considered_region_subregion_bins:
     input:
         clones="data/tmp/slop_clone_list/{cdna}_paste_{lib}.bed", region_annotated="data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.considered_region.subregion.bed"
     output:
         "data/tmp/annotated_clones_subregion/{cdna}_paste_{lib}.enlarged_dhs.considered_region.subregion.bed"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell: '''
-        set +u; source /gpfs/tagc/home/sadouni/Apps/anaconda3/bin/activate dev; set -u
         awk -v FS='\t' -v OFS='\t' '/^chr/{{$4=".";print $0}}' {input.clones} | intersectBed -wao -a stdin -b {input.region_annotated} | cut -f 1-8,10-14 > {output}
     '''
 
@@ -160,6 +161,8 @@ rule make_bins_considered_enlarged_region:
         bed_out="data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.considered_region.subregion.bed"
     params:
         bins=50
+    conda:
+        "envs/starrtrak_envs.yaml"
     run:
         make_bins(params.bins,input.bed_in,output.bed_out)
 
@@ -168,6 +171,8 @@ rule get_considered_enlarged_region:
         "data/tmp/annotated_clones_enlarged_dhs/{cdna}/{cdna}_paste_{lib}.annotated.enlarged_dhs.bed"
     output:
         "data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.considered_region.bed"
+    conda:
+        "envs/starrtrak_envs.yaml"
     run:
         enlarge_overlapping_region(input[0],output[0])
 
@@ -177,8 +182,9 @@ rule annotated_captured_regions_enlarged_dhs:
         clones="data/tmp/slop_clone_list/{cdna}_paste_{lib}.bed",dhs="data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.bed"
     output:
         "data/tmp/annotated_clones_enlarged_dhs/{cdna}/{cdna}_paste_{lib}.annotated.enlarged_dhs.bed"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell: '''
-        set +u; source /gpfs/tagc/home/sadouni/Apps/anaconda3/bin/activate dev; set -u
         awk -v FS='\t' -v OFS='\t' '/^chr/{{$4=".";print $0}}' {input.clones} | intersectBed -wao -a stdin -b {input.dhs} | cut -f 1-8,12-13 > {output}
     '''
 
@@ -188,6 +194,8 @@ rule get_enlarged_dhs:
         "data/tmp/annotated_clones/{cdna}_paste_{lib}.annotated.bed"
     output:
         "data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.bed"
+    conda:
+        "envs/starrtrak_envs.yaml"
     run:
         # lambda wildcards: enlarge_overlapping_region(f"{wildcards.input}",f"{wildcards.output}")
         enlarge_overlapping_region(input[0],output[0])
@@ -200,8 +208,9 @@ rule annotated_captured_regions:
         "data/tmp/annotated_clones/{files}.annotated.bed"
     params:
         region_type="/gpfs/tagc/home/sadouni/genome/mm9/DHS_capture_regions_mm9.bed"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell: '''
-        set +u; source /gpfs/tagc/home/sadouni/Apps/anaconda3/bin/activate dev; set -u
         awk -v FS='\t' -v OFS='\t' '/^chr/{{$4=".";print $0}}' {input} | intersectBed -wao -a stdin -b {params.region_type} | cut -f 1-8,12-13 > {output}
     '''
 
@@ -213,8 +222,9 @@ rule slop_bed:
         "data/tmp/slop_clone_list/{files}.bed"
     params:
         frag_size=314 ,genome="/gpfs/tagc/home/sadouni/genome/mm9/mm9_chr_size.txt"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell:'''
-        set +u; source /gpfs/tagc/home/sadouni/Apps/anaconda3/bin/activate dev; set -u
         bedtools slop -s -l 0 -r {params.frag_size} -i {input} -g {params.genome}  > {output}
     '''
 
@@ -232,11 +242,12 @@ rule paste_cdna_input:
 #Count the frequency of clone. Have to be done at each time for cdna and library
 rule bedtools_intersect_to_count:
     input:
-        cdna="data/bed_files/cdna/{cdna}.bed",lib="data/bed_files/library/{lib}.bed",clone_list="data/tmp/clone_list_1bp/{cdna}/{clone_list}.bed"
+        cdna="data/bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/bed_files/library/{lib}.original_frag_length.bed",clone_list="data/tmp/clone_list_1bp/{cdna}/{clone_list}.bed"
     output:
         cdna_out="data/tmp/count/{cdna}/{cdna}_vs_{lib}.{clone_list}.count.bed",lib_out="data/tmp/count/{cdna}/{lib}_vs_{cdna}.{clone_list}.count.bed"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell:'''
-        set +u; source /gpfs/tagc/home/sadouni/Apps/anaconda3/bin/activate dev; set -u
         awk -v FS='\t' -v OFS='\t' '((/^chr/)&&($2>=0)){{$3=$2+1;print $0}}' {input.cdna} | intersectBed -c -a {input.clone_list} -b stdin > {output.cdna_out}
         awk -v FS='\t' -v OFS='\t' '((/^chr/)&&($2>=0)){{$3=$2+1;print $0}}' {input.lib} | intersectBed -c -a {input.clone_list} -b stdin > {output.lib_out}
     '''
@@ -244,11 +255,23 @@ rule bedtools_intersect_to_count:
 #create a list of clone where all cDNA and library conditions are concatenated
 rule concat_clone_list:
     input:
-        cdna="data/bed_files/cdna/{cdna}.bed",lib="data/bed_files/library/{lib}.bed"
+        cdna="data/bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/bed_files/library/{lib}.original_frag_length.bed"
     output:
         "data/tmp/clone_list_1bp/{cdna}/{cdna}_clone_{lib}.bed"
     shell:'''
-        cat {input.cdna} {input.lib} | sort -u -k1,1 -k2,2n -k6,6 | awk -v OFS='\t' '/^chr/{{$4=".";print $0}}' | awk -v FS='\t' -v OFS='\t' '((/^chr/)&&($2>=0)){{$3=$2+1;print $0}}'  > {output}
+        cat {input.cdna} {input.lib} | sort -u -k1,1 -k2,2n -k6,6 | awk -v OFS='\t' '/^chr/{{$4=".";print $0}}' | awk -v FS='\t' -v OFS='\t' '((/^chr/)&&($2>=0)){{$3=$2+1;print $0}}'
+    '''
+
+#restore original frag lenth
+rule original_frag_length:
+    input:
+        clone_list_ind="data/bed_files/{files}.bed"
+    output:
+        original_frag_length="data/bed_files/{files}.original_frag_length.bed"
+    params:
+        frag_size=314
+    shell:'''
+        awk -v OFS='\t' '/^chr/{{if($6=="+"){{$3=$2+{params.frag_size}-1}}else{{$2=$3-{params.frag_size}+1}}print$0}}' {input.clone_list_ind} > {output.original_frag_length}
     '''
 
 rule wc_bed_files:
@@ -265,8 +288,9 @@ rule bam_to_bed:
         rep="data/input/{files}.bam"
     output:
         rep_out="data/bed_files/{files}.bed"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell:'''
-        set +u; source /gpfs/tagc/home/sadouni/Apps/anaconda3/bin/activate dev; set -u
         bedtools bamtobed -i {input.rep} | sort -k1,1 -k2,2n -k3,3n  > {output.rep_out}
     '''
 
@@ -275,7 +299,8 @@ rule merge_bam:
         expand("data/input/cdna/{cdna}.bam",cdna=CDNA)
     output:
         "data/input/cdna/merged_replicates.bam"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell:'''
-    set +u; source /gpfs/tagc/home/sadouni/Apps/anaconda3/bin/activate dev; set -u
     samtools merge {output} {input}
     '''

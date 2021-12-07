@@ -513,25 +513,29 @@ final_df.core_enhancer_annotated=merge(final_df.core_enhancer,DHS_annotated, by=
 #####################################
 
 # Output for the summary df : contain all the informations
-write.table(full_df_annotated, file=args[3],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+write.table(full_df_annotated, file=args[2],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+
+#RGB file
+# rgb_file<-file(args[6])
+cat(header_rgb, file =args[3])
+fwrite(x = final_region_subregion_rgb,
+       file = args[3],
+       sep = "\t",
+       col.names=F,
+       append=T)
+
 
 #Output of region 
 write.table(full_df_annotated_region_silencer, file=args[4],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 
 write.table(full_df_annotated_region_enhancer, file=args[5],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 
-#RGB file
-# rgb_file<-file(args[6])
-cat(header_rgb, file =args[5])
-fwrite(x = final_region_subregion_rgb,
-       file = args[4],
-       sep = "\t",
-       col.names=F,
-       append=T)
 
 
-# Bed file of core silencer
+# Bed file of core silencer/enhancer
 write.table(final_df.core_silencer_annotated, file=args[6],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
+
+write.table(final_df.core_enhancer_annotated, file=args[7],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 # Bed file of weak core silencer
 # write.table(weak_silencer, file=args[6],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 # # Bed file of strong core silencer
@@ -541,7 +545,7 @@ write.table(final_df.core_silencer_annotated, file=args[6],col.names = TRUE,row.
 # write.table(final_df.edge_annotated, file=args[8],col.names = TRUE,row.names=FALSE,sep="\t",quote=FALSE)
 
 # Save environment : if need to check something on the data on the R processing
-save.image(file=args[7])
+save.image(file=args[8])
 
 #####################
 #Test on some regions

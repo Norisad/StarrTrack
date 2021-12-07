@@ -1,15 +1,21 @@
 name:
-  r_dev
+  starrtrak_envs
 channels:
   - conda-forge
   - bioconda
   - defaults
   - guillaumecharbonnier
 dependencies:
+  - pandas
+  - numpy
+  - sys
+  - biopython
+  - bedtools
+  - samtools
   - r-dplyr
   - r-tidyverse
   - r-data.table
-  - r-gprofiler 
+  - r-gprofiler
   - r-yaml
   - r-docopt
   - r-devtools
@@ -28,4 +34,3 @@ dependencies:
   - bioconductor-org.mm.eg.db
   - bioconductor-rgreat
   - r-ggplot2
-
