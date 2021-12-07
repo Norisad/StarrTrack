@@ -10,9 +10,6 @@ from function_snakemake import *
 import sys
 import os
 import re
-import pandas as pd
-import numpy as np
-
 
 #configfile: "config.yaml"
 #instead of set env -> setup config file to use appropriate conda env
