@@ -15,13 +15,13 @@ import re
 #instead of set env -> setup config file to use appropriate conda env
 
 #Working directory
-workdir:'/gpfs/tagc/home/sadouni/atac_starseq/'  # edit
+workdir:'/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test'
 # workdir:'/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1' # on mac
 
 # Dataset : For now here then I have to setup config.yaml to don't touch this file
-CDNA,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1/data/input/cdna/{cdna}.bam')
-LIBRARY,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1/data/input/library/{lib}.bam')
-COND,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1/data/input/{cond}.bam')
+CDNA,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test/data/input/cdna/{cdna}.bam')
+LIBRARY,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test/data/input/library/{lib}.bam')
+COND,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test/data/input/{cond}.bam')
 
 # localrule all:
 #     input: data/annotated_clones/rep2_paste_input.annotated.bed, data/annotated_clones/rep1_paste_input.annotated.bed, data/wc_bed/cdna/rep2.wc.txt, data/wc_bed/cdna/rep1.wc.txt, data/wc_bed/library/input.wc.txt
@@ -129,15 +129,7 @@ rule find_core_edge_silencer:
     conda:
         "envs/starrtrak_envs.yaml"
     shell: '''
-        Rscript --vanilla subregion_analysis.R
-        {input.rep}
-        {output.summary}
-        {output.region_rgb}
-        {output.region_silencer_out}
-        {output.region_enhancer_out}
-        {output.subregion_silencer_out}
-        {output.subregion_enhancer_out}
-        {output.out_env}
+        Rscript --vanilla StarrTrack/subregion_analysis.R {input.rep} {output.summary} {output.region_rgb} {output.region_silencer_out} {output.region_enhancer_out} {output.subregion_silencer_out} {output.subregion_enhancer_out} {output.out_env}
         '''
 
 rule annotated_considered_region_subregion_bins:
@@ -158,8 +150,8 @@ rule make_bins_considered_enlarged_region:
         bed_out="data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.considered_region.subregion.bed"
     params:
         bins=50
-    conda:
-        "envs/starrtrak_envs.yaml"
+    # conda:
+    #     "StarrTrack/envs/starrtrak_envs.yaml"
     run:
         make_bins(params.bins,input.bed_in,output.bed_out)
 
@@ -168,8 +160,8 @@ rule get_considered_enlarged_region:
         "data/tmp/annotated_clones_enlarged_dhs/{cdna}/{cdna}_paste_{lib}.annotated.enlarged_dhs.bed"
     output:
         "data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.considered_region.bed"
-    conda:
-        "envs/starrtrak_envs.yaml"
+    # conda:
+    #     "StarrTrack/envs/starrtrak_envs.yaml"
     run:
         enlarge_overlapping_region(input[0],output[0])
 
@@ -179,8 +171,8 @@ rule annotated_captured_regions_enlarged_dhs:
         clones="data/tmp/slop_clone_list/{cdna}_paste_{lib}.bed",dhs="data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.bed"
     output:
         "data/tmp/annotated_clones_enlarged_dhs/{cdna}/{cdna}_paste_{lib}.annotated.enlarged_dhs.bed"
-    conda:
-        "envs/starrtrak_envs.yaml"
+    # conda:
+    #     "envs/starrtrak_envs.yaml"
     shell: '''
         awk -v FS='\t' -v OFS='\t' '/^chr/{{$4=".";print $0}}' {input.clones} | intersectBed -wao -a stdin -b {input.dhs} | cut -f 1-8,12-13 > {output}
     '''
@@ -191,8 +183,8 @@ rule get_enlarged_dhs:
         "data/tmp/annotated_clones/{cdna}_paste_{lib}.annotated.bed"
     output:
         "data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.bed"
-    conda:
-        "envs/starrtrak_envs.yaml"
+    # conda:
+    #     "StarrTrack/envs/starrtrak_envs.yaml"
     run:
         # lambda wildcards: enlarge_overlapping_region(f"{wildcards.input}",f"{wildcards.output}")
         enlarge_overlapping_region(input[0],output[0])
@@ -239,7 +231,7 @@ rule paste_cdna_input:
 #Count the frequency of clone. Have to be done at each time for cdna and library
 rule bedtools_intersect_to_count:
     input:
-        cdna="data/bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/bed_files/library/{lib}.original_frag_length.bed",clone_list="data/tmp/clone_list_1bp/{cdna}/{clone_list}.bed"
+        cdna="data/ori_bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/ori_bed_files/library/{lib}.original_frag_length.bed",clone_list="data/tmp/clone_list_1bp/{cdna}/{clone_list}.bed"
     output:
         cdna_out="data/tmp/count/{cdna}/{cdna}_vs_{lib}.{clone_list}.count.bed",lib_out="data/tmp/count/{cdna}/{lib}_vs_{cdna}.{clone_list}.count.bed"
     conda:
@@ -252,11 +244,11 @@ rule bedtools_intersect_to_count:
 #create a list of clone where all cDNA and library conditions are concatenated
 rule concat_clone_list:
     input:
-        cdna="data/bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/bed_files/library/{lib}.original_frag_length.bed"
+        cdna="data/ori_bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/ori_bed_files/library/{lib}.original_frag_length.bed"
     output:
         "data/tmp/clone_list_1bp/{cdna}/{cdna}_clone_{lib}.bed"
     shell:'''
-        cat {input.cdna} {input.lib} | sort -u -k1,1 -k2,2n -k6,6 | awk -v OFS='\t' '/^chr/{{$4=".";print $0}}' | awk -v FS='\t' -v OFS='\t' '((/^chr/)&&($2>=0)){{$3=$2+1;print $0}}'
+        cat {input.cdna} {input.lib} | sort -u -k1,1 -k2,2n -k6,6 | awk -v OFS='\t' '/^chr/{{$4=".";print $0}}' | awk -v FS='\t' -v OFS='\t' '((/^chr/)&&($2>=0)){{$3=$2+1;print $0}}' > {output}
     '''
 
 #restore original frag lenth
@@ -264,7 +256,7 @@ rule original_frag_length:
     input:
         clone_list_ind="data/bed_files/{files}.bed"
     output:
-        original_frag_length="data/bed_files/{files}.original_frag_length.bed"
+        original_frag_length="data/ori_bed_files/{files}.original_frag_length.bed"
     params:
         frag_size=314
     shell:'''

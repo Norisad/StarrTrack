@@ -187,15 +187,20 @@ silencer_threshold=-1
 # input_clone_dataf=as.data.frame(read.table("/Users/nori/sacapus_remote/silencer_project/silencer_pipeline_output_first_part/pgk/data/annotated_clones_subregion/chr11.pPGK_r1.bed",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names=(c("chr","start_clone","end_clone","point","score","strands","cdna_count","lib_count","start_subregion","end_subregion","region_type","region_id","subregion_id"))))
 
 # input_clone_dataf=as.data.frame(read.table("sacapus_remote/silencer_project/silencer_pipeline_output_first_part/pgk/data/annotated_clones_subregion/chr11.pPGK.r3.bed",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names=(c("chr","start_clone","end_clone","point","score","strands","cdna_count","lib_count","start_subregion","end_subregion","region_type","region_id","subregion_id"))))
+#
+# input_clone_dataf = as.data.frame(read.table("/Users/nori/sacapus_remote/silencer_project/core_silencer_analysis/scp1_test/head_scp1_test.bed",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names=(c("chr","start_clone","end_clone","point","score","strands","cdna_count","lib_count","start_subregion","end_subregion","region_type","region_id","subregion_id")), stringsAsFactors=T))
 
 #Input in command line
-input_clone_dataf = as.data.frame(read.table(args[1],sep="\t", dec=".",fill=TRUE,header = FALSE,col.names=(c("chr","start_clone","end_clone","point","score","strands","cdna_count","lib_count","start_subregion","end_subregion","region_type","region_id","subregion_id"))))
+input_clone_dataf = as.data.frame(read.table(args[1],sep="\t", dec=".",fill=TRUE,header = FALSE,col.names=(c("chr","start_clone","end_clone","point","score","strands","cdna_count","lib_count","start_subregion","end_subregion","region_type","region_id","subregion_id")), stringsAsFactors=T))
 #Use the file name to extract the condition name -> use on bed RGB file
 header_rgb=paste(c("track","type=bed",paste("name",unlist(strsplit(unlist(strsplit(args[1],"\\/"))[3],"\\."))[1],sep = "="),"itemRgb=on\n"),collapse  = "\t")
 
 #Annotation file
 # Need to change path to arg[x] tu be used on command line
 DHS_annotated=as.data.frame(read.table("/gpfs/tagc/home/sadouni/genome/mm9/DHS_region_id_annotated_gene.txt",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_dhs","end_dhs","region_type","region_id","genes")))
+
+# To work in local remote
+# DHS_annotated=as.data.frame(read.table("/Users/nori/sacapus_remote/genome/mm9/DHS_region_id_annotated_gene.txt",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_dhs","end_dhs","region_type","region_id","genes")))
 
 #Add one to each column to avoid 0 division
 input_clone_dataf[, 7:8]=input_clone_dataf[, 7:8] + 1
@@ -404,7 +409,7 @@ final_df.core_enhancer=final_df_exclude %>%
   summarise(start_core_enhancer = first(start_subregion),
             end_core_enhancer = last(end_subregion),
             activity_core_enhancer = mean(subregion_activity_center),
-            enhancer_edge_activity = min(subregion_activity_center),
+            enhancer_edge_activity = max(subregion_activity_center),
             start_edge_enhancer = min(start_subregion[subregion_activity_center == enhancer_edge_activity]),
             end_edge_enhancer = max(end_subregion[subregion_activity_center == enhancer_edge_activity])) %>%
   select(-gr)%>%
@@ -475,7 +480,6 @@ full_df_annotated_region_silencer=full_df_annotated %>%
 
 th_inflexion_point_enhancer <- log2(calculate_cutoff(2^full_df_annotated$region_activity_center, drawPlot=F)$absolute)
 
-calculate_cutoff(dat[idx,5], drawPlot=F)$absolute
 #Get the enhancer region
 full_df_annotated_region_enhancer=full_df_annotated %>%
     filter(region_activity_center >= th_inflexion_point_enhancer)  %>%
