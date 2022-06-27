@@ -231,7 +231,7 @@ rule paste_cdna_input:
 #Count the frequency of clone. Have to be done at each time for cdna and library
 rule bedtools_intersect_to_count:
     input:
-        cdna="data/ori_bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/ori_bed_files/library/{lib}.original_frag_length.bed",clone_list="data/tmp/clone_list_1bp/{cdna}/{clone_list}.bed"
+        cdna="data/tmp/ori_bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/tmp/ori_bed_files/library/{lib}.original_frag_length.bed",clone_list="data/tmp/clone_list_1bp/{cdna}/{clone_list}.bed"
     output:
         cdna_out="data/tmp/count/{cdna}/{cdna}_vs_{lib}.{clone_list}.count.bed",lib_out="data/tmp/count/{cdna}/{lib}_vs_{cdna}.{clone_list}.count.bed"
     conda:
@@ -244,7 +244,7 @@ rule bedtools_intersect_to_count:
 #create a list of clone where all cDNA and library conditions are concatenated
 rule concat_clone_list:
     input:
-        cdna="data/ori_bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/ori_bed_files/library/{lib}.original_frag_length.bed"
+        cdna="data/tmp/ori_bed_files/cdna/{cdna}.original_frag_length.bed",lib="data/tmp/ori_bed_files/library/{lib}.original_frag_length.bed"
     output:
         "data/tmp/clone_list_1bp/{cdna}/{cdna}_clone_{lib}.bed"
     shell:'''
@@ -256,7 +256,7 @@ rule original_frag_length:
     input:
         clone_list_ind="data/bed_files/{files}.bed"
     output:
-        original_frag_length="data/ori_bed_files/{files}.original_frag_length.bed"
+        original_frag_length="data/tmp/ori_bed_files/{files}.original_frag_length.bed"
     params:
         frag_size=314
     shell:'''
