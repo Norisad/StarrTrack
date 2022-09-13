@@ -11,10 +11,10 @@ import numpy as np
 def enlarge_overlapping_region(input,output):
     fi=open(input,"r")
     fo=open(output,"w")
-    df = pd.read_table(fi, delimiter='\t',header=None,names=["chr","start","end","point","score","strand","cdna_count","lib_count","region_type","region_id"])
+    df = pd.read_table(fi, delimiter='\t',header=None,names=["#chr","start","end","point","score","strand","cdna_count","lib_count","region_type","region_id"])
     df1 = (df.groupby('region_id', as_index=False)
-         .agg({'chr':'first', 'start':'min', 'end':'max','region_type':'first'})
-         [['chr','start','end','region_type','region_id']])
+         .agg({'#chr':'first', 'start':'min', 'end':'max','region_type':'first'})
+         [['#chr','start','end','region_type','region_id']])
     df1 = df1[df1.region_id != "."]
     df1.to_csv(fo,index=False, sep='\t')
 

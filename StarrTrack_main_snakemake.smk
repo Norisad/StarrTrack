@@ -1,30 +1,29 @@
-# COMMAND TO LAUNCH IT : `snakemake -s snake_capstarr_rep_by_rep.smk -c 'qsub -V -q tagc -l nodes=1:ppn=15' -j 6`
-# If threads is specified in config.yaml `snakemake -s snake_capstarr_rep_by_rep.smk -c 'qsub -V -q tagc -l nodes=1:ppn={threads}' -j 6`
-# in local mode with job in parallel  `snakemake -s snake_capstarr_rep_by_rep.smk -c 'qsub -V -q tagc -l nodes=1:ppn=15' -j 6`
+##### Running commands ######
+# COMMAND TO LAUNCH IT :
+# snakemake -s StarrTrack/StarrTrack_main_snakemake.smk -c 'qsub -V -q tagc -l nodes=1:ppn={threads}' -j 6 --use-conda
 # Command to unlock dir if needed : `snakemake --unlock -s snake_file.py`
-# DAG of jobs : snakemake -s snake_capstarr_rep_by_rep.smk --dag | dot -Tsvg > dag.svg
+# DAG of jobs : snakemake -s StarrTrack/StarrTrack_main_snakemake.smk --dag | dot -Tsvg > dag.svg
 
-#snakemake -s snake_capstarr_rep_by_rep.smk -c 'qsub -V -q tagc -l nodes=1:ppn=15' -j 6 --use-conda
-
+#Load attached script
+configfile: "StarrTrack/config.yaml"
 from function_snakemake import *
-import sys
-import os
-import re
 
-#configfile: "config.yaml"
-#instead of set env -> setup config file to use appropriate conda env
 
 #Working directory
-workdir:'/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test'
-# workdir:'/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1' # on mac
+# workdir:'/gpfs/tagc/home/sadouni/integrative_reporter_assay/run423'
+workdir: config['outdir']
 
-# Dataset : For now here then I have to setup config.yaml to don't touch this file
-CDNA,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test/data/input/cdna/{cdna}.bam')
-LIBRARY,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test/data/input/library/{lib}.bam')
-COND,=glob_wildcards('/gpfs/tagc/home/sadouni/silencer_project/core_silencer_analysis/scp1_test/data/input/{cond}.bam')
+#path to input files
+#cdna and library have to be separate by folder cdna / library in input folder
+# example : data/input/cdna
+#           data/input/library
+# path_to_files = config['path_to_files']
 
-# localrule all:
-#     input: data/annotated_clones/rep2_paste_input.annotated.bed, data/annotated_clones/rep1_paste_input.annotated.bed, data/wc_bed/cdna/rep2.wc.txt, data/wc_bed/cdna/rep1.wc.txt, data/wc_bed/library/input.wc.txt
+# Dataset
+CDNA,=glob_wildcards(config['path_to_files']+'/cdna/{cdna}.bam')
+LIBRARY,=glob_wildcards(config['path_to_files']+'/library/{lib}.bam')
+COND,=glob_wildcards(config['path_to_files']+'/{cond}.bam')
+
 
 
 
@@ -47,46 +46,6 @@ rule all :
         expand("data/bed_activity/merged_replicates_paste_{lib}.region.enhancer.bed",lib=LIBRARY),
         expand("data/bed_activity/merged_replicates_paste_{lib}.core_enhancer.bed",lib=LIBRARY)
 
-
-# rule get_normalization_value:
-
-# rule make_frag_great_again:
-#     input:
-#         clone_list="clone_list/clone_list.1bp.{cond}.count.bed"
-#     params:
-#         elong=estimate_frag_size("/home/sadouni/silencer_project/silencer_project/capstarr-pipeline/t5_peaks.xls"),genome="/home/sadouni/genome/mm9/mm9_chr_size.txt"
-#     output:
-#         "clone_list/clone_list.1bp.{cond}.slop.count.bed"
-#     shell:'''
-#         bedtools slop -b {params.elong} -i {input.clone_list} -g {params.genome}
-#     '''
-
-# rule get_estimate_frag_size:
-#     input:
-#         "temp/macs_est.xls"
-#     output:
-#         "temp/estimate_size_frag.txt"
-#     run:
-#         estimate_frag_size("/home/sadouni/silencer_project/silencer_project/capstarr-pipeline/t5_peaks.xls","temp/estimate_size_frag.txt")
-
-# rule macs_estimate_frag_size:
-#     input:
-#         expand("bed_files/{cond}.bed",cond=CONDITION)
-#     output:
-#         "temp/macs_est.xls"
-#     shell: '''
-#         cat {input} | sort -k1,1 -k2,2n -k6,6 | awk -v OFS='\t' '/^chr/{{$4=".";print $0}}' > temp/concat_bed.bed
-#         macs2 callpeak -t temp/concat_bed.bed -f BED -g mm -n macs_est
-#     '''
-
-# rule concatenate_replicate:
-#     input:
-#         expand("data/annotated_clones/{cdna}_paste_{lib}.annotated.bed", cdna=CDNA,lib=LIBRARY)
-#     output:
-#         "data/merge_replicates/merge.annotated.bed"
-#     shell:'''
-#         cat {input} > {output}
-#     '''
 
 #Compute RGB color code proportional to FC
 rule compute_rgb:
@@ -171,8 +130,8 @@ rule annotated_captured_regions_enlarged_dhs:
         clones="data/tmp/slop_clone_list/{cdna}_paste_{lib}.bed",dhs="data/tmp/enlarged_coordinates/{cdna}/{cdna}_paste_{lib}.enlarged_dhs.bed"
     output:
         "data/tmp/annotated_clones_enlarged_dhs/{cdna}/{cdna}_paste_{lib}.annotated.enlarged_dhs.bed"
-    # conda:
-    #     "envs/starrtrak_envs.yaml"
+    conda:
+        "envs/starrtrak_envs.yaml"
     shell: '''
         awk -v FS='\t' -v OFS='\t' '/^chr/{{$4=".";print $0}}' {input.clones} | intersectBed -wao -a stdin -b {input.dhs} | cut -f 1-8,12-13 > {output}
     '''
@@ -196,7 +155,8 @@ rule annotated_captured_regions:
     output:
         "data/tmp/annotated_clones/{files}.annotated.bed"
     params:
-        region_type="/gpfs/tagc/home/sadouni/genome/mm9/DHS_capture_regions_mm9.bed"
+        # region_type="/gpfs/tagc/home/sadouni/genome/captured_regions/hProm.hg19.annotated_id.bed"
+        region_type=config['captured_regions_ref']
     conda:
         "envs/starrtrak_envs.yaml"
     shell: '''
@@ -210,7 +170,9 @@ rule slop_bed:
     output:
         "data/tmp/slop_clone_list/{files}.bed"
     params:
-        frag_size=314 ,genome="/gpfs/tagc/home/sadouni/genome/mm9/mm9_chr_size.txt"
+        # frag_size=314 ,genome="/gpfs/tagc/home/sadouni/genome/hg19/hg19.chr_size.txt"
+        frag_size=314 ,genome=config['chr_size_file']
+
     conda:
         "envs/starrtrak_envs.yaml"
     shell:'''
@@ -263,6 +225,7 @@ rule original_frag_length:
         awk -v OFS='\t' '/^chr/{{if($6=="+"){{$3=$2+{params.frag_size}-1}}else{{$2=$3-{params.frag_size}+1}}print$0}}' {input.clone_list_ind} > {output.original_frag_length}
     '''
 
+#Get normalisation number
 rule wc_bed_files:
     input:
         "data/bed_files/{files}.bed",
@@ -282,7 +245,8 @@ rule bam_to_bed:
     shell:'''
         bedtools bamtobed -i {input.rep} | sort -k1,1 -k2,2n -k3,3n  > {output.rep_out}
     '''
-
+#merge all merged_replicates
+#analysis is done in parallele for separate and merged replicates
 rule merge_bam:
     input:
         expand("data/input/cdna/{cdna}.bam",cdna=CDNA)

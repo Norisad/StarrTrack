@@ -197,10 +197,11 @@ header_rgb=paste(c("track","type=bed",paste("name",unlist(strsplit(unlist(strspl
 
 #Annotation file
 # Need to change path to arg[x] tu be used on command line
-DHS_annotated=as.data.frame(read.table("/gpfs/tagc/home/sadouni/genome/mm9/DHS_region_id_annotated_gene.txt",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_dhs","end_dhs","region_type","region_id","genes")))
+# Coordinated of captured region : promoter / DHS...
+CapR_annotated=as.data.frame(read.table("/gpfs/tagc/home/sadouni/genome/captured_regions/hProm.hg19.annotated_id.bed",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_capR","end_capR","region_type","region_id")))
 
 # To work in local remote
-# DHS_annotated=as.data.frame(read.table("/Users/nori/sacapus_remote/genome/mm9/DHS_region_id_annotated_gene.txt",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_dhs","end_dhs","region_type","region_id","genes")))
+# CapR_annotated=as.data.frame(read.table("/Users/nori/sacapus_remote/genome/mm9/DHS_region_id_annotated_gene.txt",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_capR","end_capR","region_type","region_id","genes")))
 
 #Add one to each column to avoid 0 division
 input_clone_dataf[, 7:8]=input_clone_dataf[, 7:8] + 1
@@ -459,21 +460,21 @@ full_df=full_df %>%
 
 # Annotate the df with gene
 # all is FALSE because we exclude some region (fpkm<1) : to avoid NA value
-full_df_annotated=merge(full_df,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
-  select(chr,start_region,end_region,region_id,start_dhs,end_dhs,
+full_df_annotated=merge(full_df,CapR_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
+  select(chr,start_region,end_region,region_id,start_capR,end_capR,
          fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,
          start_core_silencer,end_core_silencer,activity_core_silencer,
          start_edge_silencer,end_edge_silencer,silencer_edge_activity,
          start_core_enhancer,end_core_enhancer,activity_core_enhancer,
-         start_edge_enhancer,end_edge_enhancer,enhancer_edge_activity,
-         genes)
+         start_edge_enhancer,end_edge_enhancer,enhancer_edge_activity
+         )
 
 #Split dataframe to got only region with activity lower than -1/ core silencer
 # Not need if I create file with region and subregion in rgb
 
 full_df_annotated_region_silencer=full_df_annotated %>%
   filter(region_activity_center <= silencer_threshold)  %>%
-  select(c(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,genes))
+  select(c(chr,start_region,end_region,region_id,start_capR,end_capR,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center))
   full_df_annotated_region_silencer = full_df_annotated_region_silencer[!duplicated(full_df_annotated_region_silencer[,c('region_id')]),]
 
 #Compute the inflexion point : threshold to determine the enhancer
@@ -483,22 +484,22 @@ th_inflexion_point_enhancer <- log2(calculate_cutoff(2^full_df_annotated$region_
 #Get the enhancer region
 full_df_annotated_region_enhancer=full_df_annotated %>%
     filter(region_activity_center >= th_inflexion_point_enhancer)  %>%
-    select(c(chr,start_region,end_region,region_id,start_dhs,end_dhs,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center,genes))
+    select(c(chr,start_region,end_region,region_id,start_capR,end_capR,fpkm_cdna_region,fpkm_lib_region,region_type,region_activity_center))
 full_df_annotated_region_enhancer = full_df_annotated_region_enhancer[!duplicated(full_df_annotated_region_enhancer[,c('region_id')]),]
   
 #Get the core silencer which are in silencer region
-final_df.core_silencer_annotated=merge(final_df.core_silencer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
+final_df.core_silencer_annotated=merge(final_df.core_silencer,CapR_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
   filter(region_activity_center <= silencer_threshold)  %>%
   select(chr,start_core_silencer,end_core_silencer,activity_core_silencer,
          start_edge_silencer,end_edge_silencer,silencer_edge_activity,
-         region_type,region_id,region_activity_center,genes,start_dhs,end_dhs)
+         region_type,region_id,region_activity_center,start_capR,end_capR)
 
 #Get the core enhancer which are in enhancer region
-final_df.core_enhancer_annotated=merge(final_df.core_enhancer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
+final_df.core_enhancer_annotated=merge(final_df.core_enhancer,CapR_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
   filter(region_activity_center >= th_inflexion_point_enhancer)  %>%
   select(chr,start_core_enhancer,end_core_enhancer,activity_core_enhancer,
          start_edge_enhancer,end_edge_enhancer,enhancer_edge_activity,
-         region_type,region_id,region_activity_center,genes,start_dhs,end_dhs)
+         region_type,region_id,region_activity_center,start_capR,end_capR)
 
 
 #Get weak and strong silencer
@@ -507,9 +508,9 @@ final_df.core_enhancer_annotated=merge(final_df.core_enhancer,DHS_annotated, by=
 
 
 #Get df with only edge
-# final_df.edge_annotated=merge(final_df.core_silencer,DHS_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
+# final_df.edge_annotated=merge(final_df.core_silencer,CapR_annotated, by=c("region_id","chr","region_type"),all=FALSE)%>%
 #   filter(region_activity_center <= -1)  %>%
-#   select(chr,start_edge,end_edge,activity_edge,region_type,region_id,genes,start_dhs,end_dhs)
+#   select(chr,start_edge,end_edge,activity_edge,region_type,region_id,genes,start_capR,end_capR)
 
 
 #####################################

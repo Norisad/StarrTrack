@@ -1,0 +1,15 @@
+#Edit to fit your analysis
+
+#threads
+threads : 15
+#Working directory
+outdir : '/gpfs/tagc/home/sadouni/integrative_reporter_assay/run423'
+
+# Your input file have to be in input folder then separate cdna from library with proper folders
+path_to_files : '/gpfs/tagc/home/sadouni/integrative_reporter_assay/run423/data/input'
+
+#Path to chromosome size file
+chr_size_file : '/gpfs/tagc/home/sadouni/genome/hg19/hg19.chr_size.txt'
+
+#Path to ref coordinates of captured region : DHS, hProm...
+captured_regions_ref : '/gpfs/tagc/home/sadouni/genome/captured_regions/hProm.hg19.annotated_id.bed'
