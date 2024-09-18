@@ -198,7 +198,7 @@ header_rgb=paste(c("track","type=bed",paste("name",unlist(strsplit(unlist(strspl
 #Annotation file
 # Need to change path to arg[x] tu be used on command line
 # Coordinated of captured region : promoter / DHS...
-CapR_annotated=as.data.frame(read.table("/gpfs/tagc/home/sadouni/genome/captured_regions/hProm.hg19.annotated_id.bed",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_capR","end_capR","region_type","region_id")))
+CapR_annotated=as.data.frame(read.table("/mnt/thymus/synoSalva/Nori_Processing/bm_process/genome/captured_regions/hProm.hg19.annotated_id.bed",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_capR","end_capR","region_type","region_id")))
 
 # To work in local remote
 # CapR_annotated=as.data.frame(read.table("/Users/nori/sacapus_remote/genome/mm9/DHS_region_id_annotated_gene.txt",sep="\t", dec=".",fill=TRUE,header = FALSE,col.names = c("chr","start_capR","end_capR","region_type","region_id","genes")))

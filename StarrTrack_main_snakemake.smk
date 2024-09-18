@@ -29,8 +29,8 @@ COND,=glob_wildcards(config['path_to_files']+'/{cond}.bam')
 
 rule all :
     input:
-        expand("data/bed_rgb/by_clones/{cdna}_paste_{lib}.rgb.bed",cdna=CDNA,lib=LIBRARY),
-        expand("data/bed_rgb/by_clones/merged_replicates_paste_{lib}.rgb.bed",lib=LIBRARY),
+        expand("data/bed_rgb/by_clones/{cdna}_paste_{lib}.rgb.bed.gz",cdna=CDNA,lib=LIBRARY),
+        expand("data/bed_rgb/by_clones/merged_replicates_paste_{lib}.rgb.bed.gz",lib=LIBRARY),
         expand("data/bed_rgb/by_region_subregion/{cdna}_paste_{lib}.considered_region.rgb.bed",cdna=CDNA,lib=LIBRARY),
         expand("data/bed_rgb/by_region_subregion/merged_replicates_paste_{lib}.considered_region.rgb.bed",lib=LIBRARY),
         expand("data/summary/{cdna}_paste_{lib}.summary.txt",cdna=CDNA,lib=LIBRARY),
@@ -47,17 +47,30 @@ rule all :
         expand("data/bed_activity/merged_replicates_paste_{lib}.core_enhancer.bed",lib=LIBRARY)
 
 
-#Compute RGB color code proportional to FC
+# Compute RGB color code proportional to FC
 rule compute_rgb:
     input:
         "data/tmp/fold_change/{cdna}_paste_{lib}.fc.bed"
     output:
-        "data/bed_rgb/by_clones/{cdna}_paste_{lib}.rgb.bed"
+        "data/bed_rgb/by_clones/{cdna}_paste_{lib}.rgb.bed.gz"  # Modifier l'extension ici
     params:
         bed_header = "{cdna}"
     shell: '''
-        awk -v maxlogratio=5 -v FS='\t' -v OFS='\t' '/^chr/{{r=0;g=0;if($9<1){{r=-255*(log($9)/log(2))/maxlogratio;if(r>255){{r=255}}}};if($9>1){{g=255*(log($9)/log(2))/maxlogratio;if(g>255){{g=255}}}};print $0,r","g",0"}}' {input} | awk -v FS='\t' -v OFS='\t' 'BEGIN{{print"track","type=bed","name={params.bed_header}","itemRgb=on"}} /^chr/{{print $1,$2,$3,".",$5,$6,$2,$3,$10}}' > {output}
-    '''
+        awk -v maxlogratio=5 -v FS='\t' -v OFS='\t' 'BEGIN{{print"track","type=bed","name={params.bed_header}","itemRgb=on"}}
+        /^chr/{{ 
+            r=0; g=0;
+            fc=$9;  # Assume fold change is in the 9th column
+            log2fc=log(fc)/log(2);  # Calculate log2 of fold change
+            if (log2fc < 0) {{
+                r = int(-255 * log2fc / maxlogratio + 0.5);
+                if (r > 255) r = 255;
+            }} else if (log2fc > 0) {{
+                g = int(255 * log2fc / maxlogratio + 0.5);
+                if (g > 255) g = 255;
+            }}
+            print $1, $2, $3,".",log2fc, $6, $2, $3, r "," g ",0";  # Place log2fc in the 4th column
+        }}' {input} | gzip -c > {output}           
+            '''
 
 #compute FC -> normalisation using number of read
 rule compute_fc:
